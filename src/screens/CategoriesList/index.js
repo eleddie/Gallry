@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, FlatList, StatusBar } from 'react-native';
+import { StyleSheet, Text, View, FlatList, StatusBar, AsyncStorage } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Touchable from '../../components/Touchable';
 import Color from '../../components/Color';
@@ -28,8 +28,9 @@ const data = [
 export default class CategoriesList extends React.Component {
 	static navigationOptions = ({ navigation }) => {
 		return {
-			headerRight: <Touchable onPress={() => navigation.navigate('NewCategory')}><Icon name="plus" color="#fff" size={24} style={{ paddingRight: 16 }} /></Touchable>,
-			headerLeft: <Touchable><Icon name="magnify" color="#fff" size={24} style={{ paddingLeft: 16 }} /></Touchable>,
+			headerRight: <Touchable onPress={() => navigation.navigate('NewCategory', { refresh: navigation.getParam('refreshData') })}><Icon name="plus" color="#fff" size={24} style={{ paddingRight: 16 }} /></Touchable>,
+			// headerLeft: <Touchable><Icon name="magnify" color="#fff" size={24} style={{ paddingLeft: 16 }} /></Touchable>,
+			headerLeft: <View/>,
 			title: 'Gallry',
 			headerStyle: {
 				backgroundColor: '#3F51B5',
@@ -45,8 +46,27 @@ export default class CategoriesList extends React.Component {
 	constructor(props) {
 		super(props);
 		this.state = {
-			data,
+			data: []
 		};
+	}
+
+	componentDidMount() {
+		this.props.navigation.setParams({ refreshData: this.refreshData });
+		this.refreshData();
+	}
+
+	refreshData = () => {
+		AsyncStorage.getItem('categories', (error, result) => {
+			console.log(result);
+			if (!error) {
+				if (result) {
+					const data = JSON.parse(result);
+					this.setState({ data });
+				} else {
+				}
+				AsyncStorage.setItem('categories', '[]');
+			}
+		});
 	}
 
 	renderRow = (item) => {
@@ -59,8 +79,8 @@ export default class CategoriesList extends React.Component {
 					</View>
 					<Text style={styles.rowName}>{item.name}</Text>
 					<View style={styles.rowExtraInfo}>
-						<Text>{item.tags} etiqueta{item.tags > 1 && 's'}</Text>
-						<Text>{item.photos} foto{item.photos > 1 && 's'}</Text>
+						<Text>{item.tags.length} etiqueta{item.tags.length !== 1 && 's'}</Text>
+						<Text>{item.photos.length} foto{item.photos.length !== 1 && 's'}</Text>
 					</View>
 				</View>
 			</Touchable>

@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { View, StyleSheet, StatusBar, ScrollView, FlatList, Image, Dimensions } from 'react-native';
+import { View, StyleSheet, StatusBar, ScrollView, FlatList, Image, Dimensions, AsyncStorage } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import RoundImage from '../../components/RoundImage';
 import TextSpacing from '../../components/TextSpacing';
@@ -34,7 +34,7 @@ export default class Category extends Component {
 	static navigationOptions = ({ navigation }) => {
 		return {
 			headerLeft: <Touchable onPress={() => navigation.goBack()}><Icon name="chevron-left" color="#fff" size={24} style={{ paddingLeft: 16 }} /></Touchable>,
-			headerRight: <Touchable borderless onPress={() => navigation.navigate('Camera')}><Icon name="camera" color="#fff" size={24} style={{ paddingRight: 16 }} /></Touchable>,
+			headerRight: <Touchable borderless onPress={() => navigation.navigate('Camera', { name: navigation.getParam('name'), refresh: navigation.getParam('refreshData') })}><Icon name="camera" color="#fff" size={24} style={{ paddingRight: 16 }} /></Touchable>,
 			title: navigation.getParam('name'),
 			headerStyle: {
 				backgroundColor: '#3F51B5',
@@ -48,16 +48,62 @@ export default class Category extends Component {
 		}
 	};
 
-	renderImage = (image) => {
+	constructor(props) {
+		super(props);
+		this.state = {
+			photos: [],
+			tags: [],
+		};
+	}
+
+	componentDidMount() {
+		this.props.navigation.setParams({ refreshData: this.loadImages });
+		this.loadImages();
+	}
+
+	loadImages = () => {
+		AsyncStorage.getItem('categories', (error, result) => {
+			if (!error) {
+				if (result) {
+					const data = JSON.parse(result);
+					const category = data.filter(category => category.name = this.props.navigation.getParam('name'));
+					console.log(category[0].photos.length);
+					if (category.length > 0) {
+						this.setState({
+							photos: category[0].photos,
+							tags: category[0].tags,
+						});
+					}
+				}
+			}
+		});
+	}
+
+	renderImage = async (image) => {
+		const uri = await AsyncStorage.getItem(image);
 		return (
-			<Touchable key={image}>
+			<Touchable key={image} onPress={() => this.props.navigation.navigate('ImageViewer', { image })}>
 				<View style={styles.imageWrapper}>
 					<Image
 						style={styles.image}
-						source={{ uri: image }}
+						source={{ uri }}
 					/>
 				</View>
 			</Touchable>);
+	}
+
+	renderTags = () => {
+		if (true)
+			return null;
+		return (
+			<View>
+				<View style={styles.separator} />
+				<ScrollView horizontal style={styles.tags}>
+					{this.state.tags.map(tag => <Tag>{tag}</Tag>)}
+				</ScrollView>
+				<View style={styles.separator} />
+			</View>
+		);
 	}
 
 	render() {
@@ -66,26 +112,16 @@ export default class Category extends Component {
 		return (
 			<ScrollView style={styles.container}>
 				<StatusBar barStyle="light-content" />
-				<Touchable><TextSpacing styles={styles.label} spacing={2}>EDITAR</TextSpacing></Touchable>
+				{/* <Touchable><TextSpacing styles={styles.label} spacing={2}>EDITAR</TextSpacing></Touchable> */}
 				<View style={styles.imageContainer}>
 					<RoundImage size={128} source={image} />
 					<Color colorStyle={styles.color} color={color} size={24} />
 				</View>
-				<View>
-					<View style={styles.separator} />
-					<ScrollView horizontal style={styles.tags}>
-						<Tag>DERIVADAS</Tag>
-						<Tag>Limites</Tag>
-						<Tag>Integrales</Tag>
-						<Tag>Funciones</Tag>
-						<Tag>Ecuaciones</Tag>
-					</ScrollView>
-					<View style={styles.separator} />
-				</View>
+				{this.renderTags()}
 				<FlatList
 					contentContainerStyle={styles.list}
 					numColumns={3}
-					data={suggestions1}
+					data={this.state.photos}
 					renderItem={({ item }) => this.renderImage(item)}
 					keyExtractor={imageUrl => imageUrl} />
 			</ScrollView>
